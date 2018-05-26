@@ -19,7 +19,7 @@ class Ether(Structure):
     _fields_ = [
             ("dst", c_ubyte*6),
             ("src", c_ubyte*6),
-            ("type", c_short)
+            ("type", c_ushort)
             ]
 
     def __new__(self, socket_buffer=None):
@@ -126,19 +126,35 @@ class TCP(Structure):
 
 
 class UDP(Structure):
-    _fields_ = []
+    _fields_ = [
+            ("sport", c_ushort),
+            ("dport", c_ushort),
+            ("len", c_ushort),
+            ("chksum", c_ushort)
+            ]
 
     def __new__(self, socket_buffer=None):
         return self.from_buffer_copy(socket_buffer)
 
     def __init__(self, socket_buffer=None):
-        pass
+        self.sport_bytes = struct.pack("<H", self.sport)
+        self.sport_num = struct.unpack(">H", self.sport_bytes)[0]
+
+        self.dport_bytes = struct.pack("<H", self.dport)
+        self.dport_num = struct.unpack(">H", self.dport_bytes)[0]
+
+        self.chksum_bytes = struct.pack("<H", self.chksum)
+        self.chksum_num = hex(struct.unpack(">H", self.chksum_bytes)[0])
+
 
 f = "capture.pcap"
 packets = scapy.all.rdpcap(f)
 
+counter = 1
 for pkt in packets:
-    # pkt = packets[3]
+    print("Packet #" + str(counter))
+    counter += 1
+    # pkt = packets[6]
     pkt = bytes(pkt)
     # print(pkt[14:34].hex())
 
@@ -148,23 +164,42 @@ for pkt in packets:
     print("Ether Type: ", ether_header.type_str)
     print()
 
-    ip_header = IP(pkt[14:34])
-    print("IP src addr: ", ip_header.src_addr)
-    print("IP dst addr: ", ip_header.dst_addr)
-    print("IP protocol: ", ip_header.protocol)
-    print()
+    if ether_header.type_str == 'IPv4':
+        ip_header = IP(pkt[14:34])
+        print("IP src addr: ", ip_header.src_addr)
+        print("IP dst addr: ", ip_header.dst_addr)
+        print("IP protocol: ", ip_header.protocol)
+        print()
 
-    # arp_header = ARP(pkt[14:42])
-    # print("ARP src IP: ", arp_header.ip_src)
-    # print("ARP src MAC: ", arp_header.mac_src)
-    # print("ARP target IP: ", arp_header.ip_target)
-    # print("ARP target MAC: ", arp_header.mac_target)
-    # print()
+    elif ether_header.type_str == 'ARP':
+        arp_header = ARP(pkt[14:42])
+        print("ARP src IP: ", arp_header.ip_src)
+        print("ARP src MAC: ", arp_header.mac_src)
+        print("ARP target IP: ", arp_header.ip_target)
+        print("ARP target MAC: ", arp_header.mac_target)
+        print()
 
-    tcp_header = TCP(pkt[34:66])
-    print("TCP src port: ", tcp_header.sport_num)
-    print("TCP dst port: ", tcp_header.dport_num)
-    print(tcp_header.chksum_num)
-    print()
+    if ether_header.type_str == 'IPv4':
+        if ip_header.protocol == 'TCP':
+            try:
+                tcp_header = TCP(pkt[34:66])
+                print("TCP src port: ", tcp_header.sport_num)
+                print("TCP dst port: ", tcp_header.dport_num)
+                print("TCP chksum: ", tcp_header.chksum_num)
+                if tcp_header.sport_num == 80 or tcp_header.dport_num == 80:
+                    print("TCP HTTP packet")
+                if tcp_header.sport_num == 443 or tcp_header.dport_num == 443:
+                    print("TCP HTTPS packet")
+                print()
+            except:
+                pass
 
-    break
+        elif ip_header.protocol == 'UDP':
+            udp_header = UDP(pkt[34:42])
+            print("UDP src port: ", udp_header.sport_num)
+            print("UDP dst port: ", udp_header.dport_num)
+            if udp_header.sport_num == 53 or udp_header.dport_num == 53:
+                print("UDP DNS packet")
+            print()
+    print("**********************************************")
+    # break
