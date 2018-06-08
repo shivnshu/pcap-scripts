@@ -5,7 +5,7 @@ import nmap
 if (len(sys.argv) < 2):
     print("Usage: <bin> <ip-address> [port-range]")
     print("Eg. ./scan.py 127.0.0.1 1-100")
-    sys.exit()
+    Sys.exit()
 
 mapping_dict = {}
 
