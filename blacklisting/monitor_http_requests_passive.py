@@ -26,6 +26,9 @@ def check_alert(pkt, whitelist_dict):
     # Ignore if host is not specified in whitelist
     if not http_host in whitelist_dict:
         return
+    # Continue only if method is GET
+    if http_layer.Method.decode() != 'GET':
+        return
     http_path = http_layer.Path.decode()
 
     # For boundary case where path = '/'
