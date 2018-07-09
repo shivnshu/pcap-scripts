@@ -1,8 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 
 # Python script to alert the user if a http(port==80) request is made to the host specified in whitelist.yaml but the requested path is not whitelisted.
 # Assumptions: Every HTTP Request MUST have Host field in its header which is always true for HTTP/1.1. See https://www.ietf.org/rfc/rfc2616.txt.
 
+from __future__ import print_function
 import scapy.all as scapy
 from scapy.layers import http
 import yaml
